@@ -4,6 +4,11 @@
 #include <time.h>
 #include <string.h>
 
+/*
+ TODO
+ - Add code to check if gettimeofday is a syscall
+*/
+
 #define CURRENT_CLOCK_PATH "/sys/devices/system/clocksource/clocksource0/current_clocksource"
 
 void loop_gettimeofday(int loop_count, struct timeval *tv) {
