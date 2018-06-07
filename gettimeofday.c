@@ -11,6 +11,7 @@
 */
 
 #define CURRENT_CLOCK_PATH "/sys/devices/system/clocksource/clocksource0/current_clocksource"
+#define AVAILABLE_CLOCK_PATH "/sys/devices/system/clocksource/clocksource0/available_clocksource"
 
 static int loop_count = 5000000;
 
@@ -19,6 +20,27 @@ void loop_gettimeofday(int loop_count, struct timeval *tv) {
     for(i=0 ; i<loop_count; i++) {
         gettimeofday(tv, 0);
     }
+}
+
+char *get_current_clocksource() {
+    int fd, res;
+    char *current_clocksource;
+
+    current_clocksource = malloc(4096);
+
+    fd = open(CURRENT_CLOCK_PATH, O_RDONLY);
+    if (fd == -1 ) {
+        perror("open()");
+        exit(EXIT_FAILURE);
+    }
+
+    res = read(fd, current_clocksource, 4096);
+    if(res == -1) {
+        perror("read()");
+        exit(EXIT_FAILURE);
+    }
+
+    return current_clocksource;
 }
 
 void set_clocksource(char *clocksource) {
@@ -40,7 +62,8 @@ void benchmark_available_clocksources(void) {
     buf = (char *)malloc(4096);
     memset(buf, '\0', 4096);
 
-    fd = open("/sys/devices/system/clocksource/clocksource0/available_clocksource", O_RDONLY);
+    printf("Calling gettimeofday %d times for each available clocksource\n", loop_count);
+    fd = open(AVAILABLE_CLOCK_PATH, O_RDONLY);
     if (fd == -1 ) {
         perror("open()");
         exit(EXIT_FAILURE);
@@ -54,14 +77,16 @@ void benchmark_available_clocksources(void) {
 
     while ((token = strsep(&buf, " "))) {
         if (strlen(token) == 1) break;
-        printf("Setting clocksource to %s\n", token);
         set_clocksource(token);
-        printf("Calling gettimeofday %d times\n", loop_count);
         loop_gettimeofday(loop_count, &tv);
-        printf("Cpu time taken: %.3fs\n", ((double)clock())/CLOCKS_PER_SEC);
+        printf("'%s'\n\tCpu time taken: %.3fs\n", token, ((double)clock())/CLOCKS_PER_SEC);
     }
 }
 
 int main(int argc, char *argv[]) {
+    char *original_clocksource;
+
+    original_clocksource = get_current_clocksource();
     benchmark_available_clocksources();
+    set_clocksource(original_clocksource);
 }
